@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id           String              @id @default(cuid())
+  nombre       String
+  email        String              @unique
+  passwordHash String
+  rol          String              @default("SUPERVISOR") // ADMIN | SUPERVISOR
+  activo       Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  turnos       TurnoProgramacion[]
+}
+
+model Vigilante {
+  id                 String              @id @default(cuid())
+  documento          String              @unique
+  nombres            String
+  apellidos          String
+  telefono           String
+  email              String?
+  direccion          String?
+  fotoUrl            String?
+  tipoSangre         String?             @default("O+")
+  contactoEmergencia String?
+  telefonoEmergencia String?
+  cargo              String              @default("Vigilante") // Vigilante | Escolta | Supervisor | Operador de Medios
+  tipoContrato       String              @default("Término Fijo") // Término Fijo | Término Indefinido | Relevante
+  fechaIngreso       DateTime            @default(now())
+  estado             String              @default("ACTIVO") // ACTIVO | VACACIONES | INCAPACIDAD | INACTIVO
+  observaciones      String?
+  eliminado          Boolean             @default(false) // Soft delete para preservar historial
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  certificaciones    Certificacion[]
+  turnos             TurnoProgramacion[]
+
+  @@index([documento])
+  @@index([estado, eliminado])
+}
+
+model Certificacion {
+  id               String    @id @default(cuid())
+  vigilanteId      String
+  vigilante        Vigilante @relation(fields: [vigilanteId], references: [id], onDelete: Cascade)
+  tipo             String    // Curso Básico de Seguridad | Reentrenamiento | Porte de Armas | Examen Psicofísico
+  entidad          String?
+  numeroCredencial String?
+  fechaExpedicion  DateTime
+  fechaVencimiento DateTime
+  createdAt        DateTime  @default(now())
+
+  @@index([vigilanteId])
+  @@index([fechaVencimiento])
+}
+
+model PuestoTrabajo {
+  id              String              @id @default(cuid())
+  codigo          String              @unique
+  nombre          String
+  direccion       String
+  ciudad          String              @default("Bogotá")
+  contactoCliente String?
+  telefonoCliente String?
+  requiereArma    Boolean             @default(false)
+  activo          Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  turnos          TurnoProgramacion[]
+}
+
+model TurnoProgramacion {
+  id            String        @id @default(cuid())
+  vigilanteId   String
+  vigilante     Vigilante     @relation(fields: [vigilanteId], references: [id], onDelete: Cascade)
+  puestoId      String
+  puesto        PuestoTrabajo @relation(fields: [puestoId], references: [id], onDelete: Cascade)
+  fecha         String        // Formato YYYY-MM-DD para consultas exactas sin desfase de zona horaria
+  tipoTurno     String        // DIURNO | NOCTURNO | DESCANSO | RELEVO
+  horaInicio    String        // Ej. "06:00"
+  horaFin       String        // Ej. "18:00"
+  observaciones String?
+  creadoPorId   String?
+  creadoPor     Usuario?      @relation(fields: [creadoPorId], references: [id], onDelete: SetNull)
+  createdAt     DateTime      @default(now())
+
+  @@index([fecha])
+  @@index([vigilanteId, fecha])
+  @@index([puestoId, fecha])
+}
+
