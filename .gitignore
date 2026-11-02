@@ -5,4 +5,4 @@ out
 *.db-journal
 .env.local
 .DS_Store
-
+.env
